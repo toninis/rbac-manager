@@ -208,7 +208,7 @@ func (r *Reconciler) reconcileServiceAccounts(requested *[]v1.ServiceAccount) er
 	}
 
 	for _, serviceAccountToCreate := range serviceAccountsToCreate {
-		logrus.Infof("Creating Service Account: %v", serviceAccountToCreate.Name)
+		logrus.Infof("Creating Service Account %v for Namespace %v", serviceAccountToCreate.Name, serviceAccountToCreate.Namespace)
 		_, err := r.Clientset.CoreV1().ServiceAccounts(serviceAccountToCreate.ObjectMeta.Namespace).Create(context.TODO(), &serviceAccountToCreate, metav1.CreateOptions{})
 		if err != nil {
 			logrus.Errorf("Error creating Service Account: %v", err)

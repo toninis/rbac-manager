@@ -69,7 +69,7 @@ func (p *Parser) parseRBACBinding(rbacBinding rbacmanagerv1beta1.RBACBinding, na
 	}
 
 	for _, requestedSubject := range rbacBinding.Subjects {
-		if requestedSubject.Kind == "ServiceAccount" {
+		if requestedSubject.Kind == "ServiceAccount" && requestedSubject.Namespace != "" {
 			pullsecrets := []v1.LocalObjectReference{}
 			for _, secret := range requestedSubject.ImagePullSecrets {
 				pullsecrets = append(pullsecrets, v1.LocalObjectReference{Name: secret})
@@ -175,6 +175,29 @@ func (p *Parser) parseRoleBinding(
 				om := objectMeta
 				om.Namespace = namespace.Name
 				subs := managerSubjectsToRbacSubjects(subjects)
+
+				// Dynamically add service accounts on matched namespaces
+				for _, subj := range subjects {
+
+					if subj.Namespace == "" {
+						logrus.Debugf("Adding Service Account With Dynamic Namespace %v", namespace.Name)
+
+						pullsecrets := []v1.LocalObjectReference{}
+						for _, secret := range subj.ImagePullSecrets {
+							pullsecrets = append(pullsecrets, v1.LocalObjectReference{Name: secret})
+						}
+
+						p.parsedServiceAccounts = append(p.parsedServiceAccounts, v1.ServiceAccount{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            subj.Name,
+								Namespace:       namespace.Name,
+								OwnerReferences: p.ownerRefs,
+								Labels:          kube.Labels,
+							},
+							ImagePullSecrets: pullsecrets,
+						})
+					}
+				}
 
 				p.parsedRoleBindings = append(p.parsedRoleBindings, rbacv1.RoleBinding{
 					ObjectMeta: om,
